@@ -1246,6 +1246,309 @@
 
 // new working
 
+// import React, { useEffect, useRef, useState } from "react";
+// import { io } from "socket.io-client";
+// import axios from "axios";
+
+// import {
+//   BarChart,
+//   Bar,
+//   XAxis,
+//   YAxis,
+//   Tooltip,
+//   ResponsiveContainer,
+// } from "recharts";
+
+// export default function Dashboard() {
+//   const socketRef = useRef(null);
+
+//   const [orders, setOrders] = useState([]);
+//   const [users, setUsers] = useState([]);
+//   const [products, setProducts] = useState([]);
+//   const [topProducts, setTopProducts] = useState([]);
+
+//   const [stats, setStats] = useState({
+//     totalSales: 0,
+//     totalOrders: 0,
+//     customers: 0,
+//     products: 0,
+//   });
+
+//   // =========================
+//   // FETCH PRODUCTS
+//   // =========================
+//   useEffect(() => {
+//     const loadProducts = async () => {
+//       try {
+//         const res = await axios.get("https://fakestoreapi.com/products");
+
+//         const updated = res.data.map((p) => ({
+//           ...p,
+//           stock: Math.floor(Math.random() * 50) + 10,
+//         }));
+
+//         setProducts(updated);
+
+//         const totalStock = updated.reduce(
+//           (sum, p) => sum + p.stock,
+//           0
+//         );
+
+//         setStats((prev) => ({
+//           ...prev,
+//           products: totalStock,
+//         }));
+//       } catch (err) {
+//         console.log("❌ Product Fetch Error:", err);
+//       }
+//     };
+
+//     loadProducts();
+//   }, []);
+
+//   // =========================
+//   // SOCKET
+//   // =========================
+//   useEffect(() => {
+//     socketRef.current = io("http://127.0.0.1:3001", {
+//       transports: ["websocket", "polling"],
+//     });
+
+//     const socket = socketRef.current;
+
+//     socket.on("connect", () => {
+//       console.log("✅ Connected:", socket.id);
+//     });
+
+//     socket.on("updateUsers", (data) => {
+//       setUsers(data);
+
+//       setStats((prev) => ({
+//         ...prev,
+//         customers: data.length,
+//       }));
+//     });
+
+//     // =========================
+//     // NEW ORDER
+//     // =========================
+//     socket.on("newOrder", (data) => {
+//       const order = data.order || data;
+//       if (!order) return;
+
+//       setOrders((prev) => [order, ...prev]);
+
+//       let purchasedCount = 0;
+
+//       // update stock
+//       setProducts((prevProducts) =>
+//         prevProducts.map((p) => {
+//           const item = order.items?.find(
+//             (i) => Number(i.productId) === Number(p.id)
+//           );
+
+//           if (item) {
+//             purchasedCount += item.quantity;
+
+//             return {
+//               ...p,
+//               stock: Math.max(0, p.stock - item.quantity),
+//             };
+//           }
+
+//           return p;
+//         })
+//       );
+
+//       setStats((prev) => ({
+//         ...prev,
+//         totalSales: prev.totalSales + Number(order.totalAmount || 0),
+//         totalOrders: prev.totalOrders + 1,
+//         products: Math.max(0, prev.products - purchasedCount),
+//       }));
+
+//       // =========================
+//       // TOP PRODUCTS (FIXED)
+//       // =========================
+//       setTopProducts((prev) => {
+//         const map = new Map();
+
+//         // clone previous safely (NO mutation)
+//         prev.forEach((p) => {
+//           map.set(p.id, { ...p });
+//         });
+
+//         order.items?.forEach((item) => {
+//           const id = item.productId;
+
+//           const existing = map.get(id);
+
+//           if (existing) {
+//             map.set(id, {
+//               ...existing,
+//               quantity: existing.quantity + item.quantity,
+//             });
+//           } else {
+//             map.set(id, {
+//               id,
+//               title:
+//                 item.title.length > 20
+//                   ? item.title.slice(0, 20) + "..."
+//                   : item.title,
+//               quantity: item.quantity,
+//             });
+//           }
+//         });
+
+//         return Array.from(map.values()).sort(
+//           (a, b) => b.quantity - a.quantity
+//         );
+//       });
+//     });
+
+//     return () => socket.disconnect();
+//   }, []);
+
+//   // =========================
+//   // UI COLOR
+//   // =========================
+//   const color = (status) => {
+//     if (status === "CONFIRMED") return "green";
+//     if (status === "PENDING") return "orange";
+//     return "red";
+//   };
+
+//   return (
+//     <div style={{ display: "flex", fontFamily: "Arial" }}>
+//       {/* SIDEBAR */}
+//       <div style={{ width: 220, background: "#111", color: "#fff", padding: 20 }}>
+//         <h2>AI Store</h2>
+//         <p>Dashboard</p>
+//       </div>
+
+//       {/* MAIN */}
+//       <div style={{ flex: 1, padding: 20 }}>
+//         <h1>📊 Dashboard</h1>
+
+//         {/* STATS */}
+//         <div style={{ display: "flex", gap: 20 }}>
+//           <Card title="Sales" value={`₹${stats.totalSales}`} />
+//           <Card title="Orders" value={stats.totalOrders} />
+//           <Card title="Users" value={stats.customers} />
+//           <Card title="Products" value={stats.products} />
+//         </div>
+
+//         {/* CHART */}
+//         <div style={{ marginTop: 30 }}>
+//           <h3>🔥 Top Selling Products</h3>
+
+//           <ResponsiveContainer width="100%" height={300}>
+//             <BarChart data={topProducts}>
+//               <XAxis dataKey="title" />
+//               <YAxis />
+//               <Tooltip />
+//               <Bar dataKey="quantity" fill="#ff4d4d" />
+//             </BarChart>
+//           </ResponsiveContainer>
+//         </div>
+
+//         {/* PRODUCTS */}
+//         <h3 style={{ marginTop: 40 }}>🛒 Product List</h3>
+
+//         <table border="1" width="100%" cellPadding="10">
+//           <thead>
+//             <tr style={{ background: "#ddd" }}>
+//               <th>ID</th>
+//               <th>Title</th>
+//               <th>Category</th>
+//               <th>Price</th>
+//               <th>Stock</th>
+//             </tr>
+//           </thead>
+
+//           <tbody>
+//             {products.map((p) => (
+//               <tr key={p.id}>
+//                 <td>{p.id}</td>
+//                 <td>{p.title}</td>
+//                 <td>{p.category}</td>
+//                 <td>₹{p.price}</td>
+//                 <td>{p.stock}</td>
+//               </tr>
+//             ))}
+//           </tbody>
+//         </table>
+
+//         {/* ORDERS */}
+//         <h3 style={{ marginTop: 40 }}>🔥 Live Orders</h3>
+
+//         <table border="1" width="100%" cellPadding="10">
+//           <thead>
+//             <tr style={{ background: "#ddd" }}>
+//               <th>ID</th>
+//               <th>Intent</th>
+//               <th>Amount</th>
+//               <th>Status</th>
+//             </tr>
+//           </thead>
+
+//           <tbody>
+//             {orders.map((o, i) => (
+//               <tr key={o.orderId || i}>
+//                 <td>{o.orderId}</td>
+//                 <td>{o.intent}</td>
+//                 <td>₹{o.totalAmount}</td>
+//                 <td style={{ color: color(o.status) }}>
+//                   {o.status}
+//                 </td>
+//               </tr>
+//             ))}
+//           </tbody>
+//         </table>
+
+//         {/* USERS */}
+//         <h3 style={{ marginTop: 40 }}>👥 Users</h3>
+//         {users.map((u, i) => (
+//           <span key={i} style={{ marginRight: 10 }}>
+//             {u}
+//           </span>
+//         ))}
+//       </div>
+//     </div>
+//   );
+// }
+
+// // =========================
+// // CARD COMPONENT
+// // =========================
+// function Card({ title, value }) {
+//   return (
+//     <div
+//       style={{
+//         background: "#fff",
+//         padding: 20,
+//         borderRadius: 10,
+//         minWidth: 180,
+//         boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+//       }}
+//     >
+//       <h4>{title}</h4>
+//       <h2>{value}</h2>
+//     </div>
+//   );
+// }
+
+
+
+
+
+
+
+
+
+
+
+
 import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
@@ -1310,7 +1613,7 @@ export default function Dashboard() {
   // SOCKET
   // =========================
   useEffect(() => {
-    socketRef.current = io("http://127.0.0.1:3001", {
+    socketRef.current = io("https://chat-app-yip9.onrender.com", {
       transports: ["websocket", "polling"],
     });
 
