@@ -1944,7 +1944,7 @@ export default function Dashboard() {
   // SOCKET
   // =========================
   useEffect(() => {
-    socketRef.current = io("http://127.0.0.1:3001");
+    socketRef.current = io("https://chat-app-yip9.onrender.com");
     const socket = socketRef.current;
 
     // USERS
