@@ -1543,12 +1543,301 @@
 
 
 
+// import React, { useEffect, useRef, useState } from "react";
+// import { io } from "socket.io-client";
+// import axios from "axios";
 
+// import {
+//   BarChart,
+//   Bar,
+//   XAxis,
+//   YAxis,
+//   Tooltip,
+//   ResponsiveContainer,
+// } from "recharts";
 
+// export default function Dashboard() {
+//   const socketRef = useRef(null);
 
+//   const [orders, setOrders] = useState([]);
+//   const [users, setUsers] = useState([]);
+//   const [products, setProducts] = useState([]);
+//   const [topProducts, setTopProducts] = useState([]);
 
+//   const [stats, setStats] = useState({
+//     totalSales: 0,
+//     totalOrders: 0,
+//     customers: 0,
+//     products: 0,
+//   });
 
+//   // =========================
+//   // FETCH PRODUCTS
+//   // =========================
+//   useEffect(() => {
+//     const loadProducts = async () => {
+//       try {
+//         const res = await axios.get("https://fakestoreapi.com/products");
 
+//         const updated = res.data.map((p) => ({
+//           ...p,
+//           stock: Math.floor(Math.random() * 50) + 10,
+//         }));
+
+//         setProducts(updated);
+
+//         const totalStock = updated.reduce(
+//           (sum, p) => sum + p.stock,
+//           0
+//         );
+
+//         setStats((prev) => ({
+//           ...prev,
+//           products: totalStock,
+//         }));
+//       } catch (err) {
+//         console.log("❌ Product Fetch Error:", err);
+//       }
+//     };
+
+//     loadProducts();
+//   }, []);
+
+//   // =========================
+//   // SOCKET
+//   // =========================
+//   useEffect(() => {
+//     socketRef.current = io("http://127.0.0.1:3001", {
+//       transports: ["websocket", "polling"],
+//     });
+
+//     const socket = socketRef.current;
+
+//     socket.on("connect", () => {
+//       console.log("✅ Connected:", socket.id);
+//     });
+
+//     socket.on("updateUsers", (data) => {
+//       setUsers(data);
+
+//       setStats((prev) => ({
+//         ...prev,
+//         customers: data.length,
+//       }));
+//     });
+
+//     // =========================
+//     // NEW ORDER
+//     // =========================
+//     socket.on("newOrder", (data) => {
+//       const order = data.order || data;
+//       if (!order) return;
+
+//       setOrders((prev) => [order, ...prev]);
+
+//       let purchasedCount = 0;
+
+//       // update stock
+//       setProducts((prevProducts) =>
+//         prevProducts.map((p) => {
+//           const item = order.items?.find(
+//             (i) => Number(i.productId) === Number(p.id)
+//           );
+
+//           if (item) {
+//             purchasedCount += item.quantity;
+
+//             return {
+//               ...p,
+//               stock: Math.max(0, p.stock - item.quantity),
+//             };
+//           }
+
+//           return p;
+//         })
+//       );
+
+//       setStats((prev) => ({
+//         ...prev,
+//         totalSales: prev.totalSales + Number(order.totalAmount || 0),
+//         totalOrders: prev.totalOrders + 1,
+//         products: Math.max(0, prev.products - purchasedCount),
+//       }));
+
+//       // =========================
+//       // TOP PRODUCTS (FIXED)
+//       // =========================
+//       setTopProducts((prev) => {
+//         const map = new Map();
+
+//         // clone previous safely (NO mutation)
+//         prev.forEach((p) => {
+//           map.set(p.id, { ...p });
+//         });
+
+//         order.items?.forEach((item) => {
+//           const id = item.productId;
+
+//           const existing = map.get(id);
+
+//           if (existing) {
+//             map.set(id, {
+//               ...existing,
+//               quantity: existing.quantity + item.quantity,
+//             });
+//           } else {
+//             map.set(id, {
+//               id,
+//               title:
+//                 item.title.length > 20
+//                   ? item.title.slice(0, 20) + "..."
+//                   : item.title,
+//               quantity: item.quantity,
+//             });
+//           }
+//         });
+
+//         return Array.from(map.values()).sort(
+//           (a, b) => b.quantity - a.quantity
+//         );
+//       });
+//     });
+
+//     return () => socket.disconnect();
+//   }, []);
+
+//   // =========================
+//   // UI COLOR
+//   // =========================
+//   const color = (status) => {
+//     if (status === "CONFIRMED") return "green";
+//     if (status === "PENDING") return "orange";
+//     return "red";
+//   };
+
+//   return (
+//     <div style={{ display: "flex", fontFamily: "Arial" }}>
+//       {/* SIDEBAR */}
+//       <div style={{ width: 220, background: "#111", color: "#fff", padding: 20 }}>
+//         <h2>AI Store</h2>
+//         <p>Dashboard</p>
+//       </div>
+
+//       {/* MAIN */}
+//       <div style={{ flex: 1, padding: 20 }}>
+//         <h1>📊 Dashboard</h1>
+
+//         {/* STATS */}
+//         <div style={{ display: "flex", gap: 20 }}>
+//           <Card title="Sales" value={`₹${stats.totalSales}`} />
+//           <Card title="Orders" value={stats.totalOrders} />
+//           <Card title="Users" value={stats.customers} />
+//           <Card title="Products" value={stats.products} />
+//         </div>
+
+//         {/* CHART */}
+//         <div style={{ marginTop: 30 }}>
+//           <h3>🔥 Top Selling Products</h3>
+
+//          <ResponsiveContainer width="100%" height={300}>
+//   <BarChart data={topProducts}>
+//     <XAxis dataKey="title" />
+//     <YAxis />
+//     <Tooltip />
+//     <Bar
+//       dataKey="quantity"
+//       fill="#ff4d4d"
+//       barSize={50}   // 👈 REDUCED BAR WIDTH
+//     />
+//   </BarChart>
+// </ResponsiveContainer>
+//         </div>
+
+//         {/* PRODUCTS */}
+//         <h3 style={{ marginTop: 40 }}>🛒 Product List</h3>
+
+//         <table border="1" width="100%" cellPadding="10">
+//           <thead>
+//             <tr style={{ background: "#ddd" }}>
+//               <th>ID</th>
+//               <th>Title</th>
+//               <th>Category</th>
+//               <th>Price</th>
+//               <th>Stock</th>
+//             </tr>
+//           </thead>
+
+//           <tbody>
+//             {products.map((p) => (
+//               <tr key={p.id}>
+//                 <td>{p.id}</td>
+//                 <td>{p.title}</td>
+//                 <td>{p.category}</td>
+//                 <td>₹{p.price}</td>
+//                 <td>{p.stock}</td>
+//               </tr>
+//             ))}
+//           </tbody>
+//         </table>
+
+//         {/* ORDERS */}
+//         <h3 style={{ marginTop: 40 }}>🔥 Live Orders</h3>
+
+//         <table border="1" width="100%" cellPadding="10">
+//           <thead>
+//             <tr style={{ background: "#ddd" }}>
+//               <th>ID</th>
+//               <th>Intent</th>
+//               <th>Amount</th>
+//               <th>Status</th>
+//             </tr>
+//           </thead>
+
+//           <tbody>
+//             {orders.map((o, i) => (
+//               <tr key={o.orderId || i}>
+//                 <td>{o.orderId}</td>
+//                 <td>{o.intent}</td>
+//                 <td>₹{o.totalAmount}</td>
+//                 <td style={{ color: color(o.status) }}>
+//                   {o.status}
+//                 </td>
+//               </tr>
+//             ))}
+//           </tbody>
+//         </table>
+
+//         {/* USERS */}
+//         <h3 style={{ marginTop: 40 }}>👥 Users</h3>
+//         {users.map((u, i) => (
+//           <span key={i} style={{ marginRight: 10 }}>
+//             {u}
+//           </span>
+//         ))}
+//       </div>
+//     </div>
+//   );
+// }
+
+// // =========================
+// // CARD COMPONENT
+// // =========================
+// function Card({ title, value }) {
+//   return (
+//     <div
+//       style={{
+//         background: "#fff",
+//         padding: 20,
+//         borderRadius: 10,
+//         minWidth: 180,
+//         boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+//       }}
+//     >
+//       <h4>{title}</h4>
+//       <h2>{value}</h2>
+//     </div>
+//   );
+// }
 import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
@@ -1562,13 +1851,48 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+// =========================
+// INVENTORY DATA
+// =========================
+const inventoryData = [
+  { id: 1, stock: 120, soldPerDay: 3 },
+  { id: 2, stock: 95, soldPerDay: 4 },
+  { id: 3, stock: 140, soldPerDay: 5 },
+  { id: 4, stock: 80, soldPerDay: 2 },
+  { id: 5, stock: 60, soldPerDay: 1 },
+  { id: 6, stock: 45, soldPerDay: 1 },
+  { id: 7, stock: 100, soldPerDay: 2 },
+  { id: 8, stock: 70, soldPerDay: 2 },
+  { id: 9, stock: 90, soldPerDay: 3 },
+  { id: 10, stock: 110, soldPerDay: 4 },
+  { id: 11, stock: 85, soldPerDay: 3 },
+  { id: 12, stock: 75, soldPerDay: 2 },
+  { id: 13, stock: 50, soldPerDay: 1 },
+  { id: 14, stock: 40, soldPerDay: 1 },
+  { id: 15, stock: 65, soldPerDay: 2 },
+  { id: 16, stock: 55, soldPerDay: 2 },
+  { id: 17, stock: 130, soldPerDay: 5 },
+  { id: 18, stock: 95, soldPerDay: 3 },
+  { id: 19, stock: 105, soldPerDay: 4 },
+  { id: 20, stock: 115, soldPerDay: 4 },
+];
+
+// =========================
+// PREDICTION
+// =========================
+function predictStock(stock, soldPerDay) {
+  return Math.max(0, stock - soldPerDay * 30);
+}
+
+// =========================
+// DASHBOARD
+// =========================
 export default function Dashboard() {
   const socketRef = useRef(null);
 
   const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
   const [products, setProducts] = useState([]);
-  const [topProducts, setTopProducts] = useState([]);
 
   const [stats, setStats] = useState({
     totalSales: 0,
@@ -1577,32 +1901,39 @@ export default function Dashboard() {
     products: 0,
   });
 
+  // 🔥 NEW: track dynamic soldPerDay per product
+  const [salesMap, setSalesMap] = useState({});
+
   // =========================
-  // FETCH PRODUCTS
+  // LOAD PRODUCTS
   // =========================
   useEffect(() => {
     const loadProducts = async () => {
       try {
         const res = await axios.get("https://fakestoreapi.com/products");
 
-        const updated = res.data.map((p) => ({
-          ...p,
-          stock: Math.floor(Math.random() * 50) + 10,
-        }));
+        const updated = res.data.map((p) => {
+          const inv = inventoryData.find((i) => i.id === p.id);
+
+          return {
+            ...p,
+            stock: inv?.stock || 50,
+            soldPerDay: inv?.soldPerDay || 1,
+            predictedStock: predictStock(
+              inv?.stock || 50,
+              inv?.soldPerDay || 1
+            ),
+          };
+        });
 
         setProducts(updated);
 
-        const totalStock = updated.reduce(
-          (sum, p) => sum + p.stock,
-          0
-        );
-
         setStats((prev) => ({
           ...prev,
-          products: totalStock,
+          products: updated.reduce((a, b) => a + b.stock, 0),
         }));
       } catch (err) {
-        console.log("❌ Product Fetch Error:", err);
+        console.log(err);
       }
     };
 
@@ -1613,55 +1944,62 @@ export default function Dashboard() {
   // SOCKET
   // =========================
   useEffect(() => {
-    socketRef.current = io("https://chat-app-yip9.onrender.com", {
-      transports: ["websocket", "polling"],
-    });
-
+    socketRef.current = io("http://127.0.0.1:3001");
     const socket = socketRef.current;
 
-    socket.on("connect", () => {
-      console.log("✅ Connected:", socket.id);
-    });
-
+    // USERS
     socket.on("updateUsers", (data) => {
       setUsers(data);
-
-      setStats((prev) => ({
-        ...prev,
-        customers: data.length,
-      }));
+      setStats((p) => ({ ...p, customers: data.length }));
     });
 
     // =========================
-    // NEW ORDER
+    // NEW ORDER (FIXED LOGIC)
     // =========================
     socket.on("newOrder", (data) => {
-      const order = data.order || data;
-      if (!order) return;
+      const order = data.order ?? data;
+      if (!order?.items) return;
 
       setOrders((prev) => [order, ...prev]);
 
       let purchasedCount = 0;
 
-      // update stock
       setProducts((prevProducts) =>
         prevProducts.map((p) => {
-          const item = order.items?.find(
+          const item = order.items.find(
             (i) => Number(i.productId) === Number(p.id)
           );
 
-          if (item) {
-            purchasedCount += item.quantity;
+          if (!item) return p;
 
-            return {
-              ...p,
-              stock: Math.max(0, p.stock - item.quantity),
-            };
-          }
+          purchasedCount += item.quantity;
 
-          return p;
+          const newStock = Math.max(0, p.stock - item.quantity);
+
+          // 🔥 FIX: dynamic soldPerDay
+          const prevSold = salesMap[p.id] || p.soldPerDay || 0;
+          const updatedSold = prevSold + item.quantity;
+
+          return {
+            ...p,
+            stock: newStock,
+            soldPerDay: updatedSold,
+            predictedStock: predictStock(newStock, updatedSold),
+          };
         })
       );
+
+      // update sales map
+      setSalesMap((prev) => {
+        const updated = { ...prev };
+
+        order.items.forEach((item) => {
+          updated[item.productId] =
+            (updated[item.productId] || 0) + item.quantity;
+        });
+
+        return updated;
+      });
 
       setStats((prev) => ({
         ...prev,
@@ -1669,58 +2007,14 @@ export default function Dashboard() {
         totalOrders: prev.totalOrders + 1,
         products: Math.max(0, prev.products - purchasedCount),
       }));
-
-      // =========================
-      // TOP PRODUCTS (FIXED)
-      // =========================
-      setTopProducts((prev) => {
-        const map = new Map();
-
-        // clone previous safely (NO mutation)
-        prev.forEach((p) => {
-          map.set(p.id, { ...p });
-        });
-
-        order.items?.forEach((item) => {
-          const id = item.productId;
-
-          const existing = map.get(id);
-
-          if (existing) {
-            map.set(id, {
-              ...existing,
-              quantity: existing.quantity + item.quantity,
-            });
-          } else {
-            map.set(id, {
-              id,
-              title:
-                item.title.length > 20
-                  ? item.title.slice(0, 20) + "..."
-                  : item.title,
-              quantity: item.quantity,
-            });
-          }
-        });
-
-        return Array.from(map.values()).sort(
-          (a, b) => b.quantity - a.quantity
-        );
-      });
     });
 
     return () => socket.disconnect();
-  }, []);
+  }, [salesMap]);
 
   // =========================
-  // UI COLOR
+  // UI (UNCHANGED)
   // =========================
-  const color = (status) => {
-    if (status === "CONFIRMED") return "green";
-    if (status === "PENDING") return "orange";
-    return "red";
-  };
-
   return (
     <div style={{ display: "flex", fontFamily: "Arial" }}>
       {/* SIDEBAR */}
@@ -1730,7 +2024,7 @@ export default function Dashboard() {
       </div>
 
       {/* MAIN */}
-      <div style={{ flex: 1, padding: 20 }}>
+      <div style={{ flex: 1, padding: 20, background: "#f5f5f5" }}>
         <h1>📊 Dashboard</h1>
 
         {/* STATS */}
@@ -1741,113 +2035,69 @@ export default function Dashboard() {
           <Card title="Products" value={stats.products} />
         </div>
 
-        {/* CHART */}
-        <div style={{ marginTop: 30 }}>
-          <h3>🔥 Top Selling Products</h3>
+        {/* PRODUCTS TABLE */}
+        <div style={{ marginTop: 40, background: "#fff", padding: 20 }}>
+          <h3>🛒 Products</h3>
 
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={topProducts}>
-              <XAxis dataKey="title" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="quantity" fill="#ff4d4d" />
-            </BarChart>
-          </ResponsiveContainer>
+          <table border="1" width="100%" cellPadding="10">
+            <thead style={{ background: "#222", color: "#fff" }}>
+              <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Stock</th>
+                <th>Sold/Day</th>
+                <th>Predicted Stock</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {products.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.id}</td>
+                  <td>{p.title}</td>
+                  <td>{p.stock}</td>
+                  <td>{p.soldPerDay}</td>
+
+                  <td style={{ fontWeight: "bold" }}>
+                    {p.predictedStock}
+                  </td>
+
+                  <td>
+                    {p.predictedStock < 20 ? (
+                      <span style={{ color: "red" }}>⚠️ Low</span>
+                    ) : (
+                      <span style={{ color: "green" }}>OK</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {/* PRODUCTS */}
-        <h3 style={{ marginTop: 40 }}>🛒 Product List</h3>
-
-        <table border="1" width="100%" cellPadding="10">
-          <thead>
-            <tr style={{ background: "#ddd" }}>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Stock</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {products.map((p) => (
-              <tr key={p.id}>
-                <td>{p.id}</td>
-                <td>{p.title}</td>
-                <td>{p.category}</td>
-                <td>₹{p.price}</td>
-                <td>{p.stock}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* ORDERS */}
-        <h3 style={{ marginTop: 40 }}>🔥 Live Orders</h3>
-
-        <table border="1" width="100%" cellPadding="10">
-          <thead>
-            <tr style={{ background: "#ddd" }}>
-              <th>ID</th>
-              <th>Intent</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {orders.map((o, i) => (
-              <tr key={o.orderId || i}>
-                <td>{o.orderId}</td>
-                <td>{o.intent}</td>
-                <td>₹{o.totalAmount}</td>
-                <td style={{ color: color(o.status) }}>
-                  {o.status}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
         {/* USERS */}
-        <h3 style={{ marginTop: 40 }}>👥 Users</h3>
-        {users.map((u, i) => (
-          <span key={i} style={{ marginRight: 10 }}>
-            {u}
-          </span>
-        ))}
+        <div style={{ marginTop: 40 }}>
+          <h3>👥 Users</h3>
+          {users.map((u, i) => (
+            <span key={i} style={{ marginRight: 10 }}>
+              {u}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
 // =========================
-// CARD COMPONENT
+// CARD
 // =========================
 function Card({ title, value }) {
   return (
-    <div
-      style={{
-        background: "#fff",
-        padding: 20,
-        borderRadius: 10,
-        minWidth: 180,
-        boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-      }}
-    >
+    <div style={{ background: "#fff", padding: 20, borderRadius: 10 }}>
       <h4>{title}</h4>
       <h2>{value}</h2>
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
